@@ -7,12 +7,13 @@ import androidx.room.Query
 
 @Dao
 interface Dao {
-  @Query("SELECT * FROM students")
-  fun getStudents(): List<Student>
+    @Query("SELECT * FROM students")
+    fun getStudents(): List<Student>
 
-  @Insert
-  fun addStudent(student: Student)
+    @Insert
+    fun addStudent(student: Student)
 
-  @Delete
-  fun delete(student: Student)
+    @Delete
+    fun delete(student: Student)
+
 }
