@@ -16,6 +16,8 @@ class MViewModel(application: Application): AndroidViewModel(application) {
 
     private val _students = mutableStateOf(dao.getStudents())
     val students get() = _students.value.sortedBy { it.name }
+    val studentsReversed get() = _students.value.sortedByDescending { it.name }
+    val studentsNameLength get() = _students.value.sortedBy { it.name.length }
 
     fun addStudent(inputName: String) {
         val formattedName = inputName.trim().split(" ").joinToString(separator = " ") { it.capitalize() }

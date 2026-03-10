@@ -5,6 +5,7 @@ import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Intent
 import android.os.Bundle
+import android.util.Log
 import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -25,14 +26,18 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material3.Button
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -63,6 +68,7 @@ class MainActivity : ComponentActivity() {
     fun UI(viewModel: MViewModel) {
 
         var inputName by rememberSaveable { mutableStateOf("") }
+        val currentFilter = remember { mutableStateOf(Filter.DEFAULT) }
 
         Column(
             Modifier
@@ -70,8 +76,49 @@ class MainActivity : ComponentActivity() {
                 .padding(16.dp)
         ) {
 
-            Button(onClick = { shareList(viewModel.students) }) {
-                Text(text = "Share List")
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceAround,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Button(onClick = { shareList(viewModel.students) }) {
+                    Text(text = "Share List")
+                }
+
+                val dropDownExpanded = remember { mutableStateOf(false) }
+
+                Column ( Modifier.clickable { dropDownExpanded.value = !dropDownExpanded.value }) {
+                    OutlinedButton(onClick = {dropDownExpanded.value = !dropDownExpanded.value}) {
+                        Text("Options") }
+
+                    DropdownMenu(
+                        expanded = dropDownExpanded.value,
+                        onDismissRequest = { dropDownExpanded.value = false }
+                    ) {
+                        if (currentFilter.value == Filter.DEFAULT ) {
+                            DropdownMenuItem(
+                                text = { Text("Reverse / Descending Order") },
+                                onClick = { currentFilter.value = Filter.REVERSE }
+                            )
+                        } else if(currentFilter.value != Filter.DEFAULT) {
+                            DropdownMenuItem(
+                                text = { Text("Default / Ascending Order") },
+                                onClick = { currentFilter.value = Filter.DEFAULT }
+                            )
+                        }
+                        DropdownMenuItem(
+                            text = { Text("By Name Length") },
+                            onClick = { currentFilter.value = Filter.NAME_LENGTH }
+                        )
+//
+//                        HorizontalDivider()
+//
+//                        DropdownMenuItem(
+//                            text = { Text("Send Feedback") },
+//                            onClick = { /* Handle send feedback! */ }
+//                        )
+                    }
+                }
             }
 
             Spacer(modifier = Modifier.height(8.dp))
@@ -86,16 +133,22 @@ class MainActivity : ComponentActivity() {
                     modifier = Modifier.fillMaxWidth(0.7f),
                     value = inputName,
                     onValueChange = { inputName = it },
-                    label = { Text(text = "Enter Student Name") },
+                    label = { Text(text = "Enter Name") },
                     keyboardOptions = KeyboardOptions(imeAction = ImeAction.Send),
                     keyboardActions = KeyboardActions(
-                        onSend = { if(inputName.isNotBlank()) viewModel.addStudent(inputName) }
+                        onSend = { if(inputName.isNotBlank()) {
+                            viewModel.addStudent(inputName)
+                            inputName = ""
+                        } }
 //            onNext = { focusRequester.requestFocus() }
                     )
                 )
 
                 Button(onClick = {
-                    if(inputName.isNotBlank()) viewModel.addStudent(inputName)
+                    if(inputName.isNotBlank()) {
+                        viewModel.addStudent(inputName)
+                        inputName = ""
+                    }
                 }
                 ) {
                     Text(text = "Add")
@@ -105,14 +158,21 @@ class MainActivity : ComponentActivity() {
 
             Spacer(modifier = Modifier.height(8.dp))
 
+            var students: List<Student> = listOf()
+            students = when (currentFilter.value) {
+                Filter.DEFAULT -> viewModel.students
+                Filter.REVERSE -> viewModel.studentsReversed
+                Filter.NAME_LENGTH -> viewModel.studentsNameLength
+            }
+
             LazyColumn(
                 Modifier
                     .fillMaxSize()
                     .padding(8.dp)) {
-                items(viewModel.students.size) {
+                items(students.size) {
 
                     val number = it + 1
-                    val name = viewModel.students[it].name
+                    val name = students[it].name
 
                     Row(
                         Modifier
@@ -127,7 +187,7 @@ class MainActivity : ComponentActivity() {
                         Icon(
                             imageVector = Icons.Default.Delete,
                             contentDescription = "Delete Item",
-                            modifier = Modifier.clickable { viewModel.deleteFromDB(viewModel.students[it]) }
+                            modifier = Modifier.clickable { viewModel.deleteFromDB(students[it]) }
                         )
                     }
                     HorizontalDivider()
@@ -163,6 +223,7 @@ class MainActivity : ComponentActivity() {
 
         catch(e: Exception){
             Toast.makeText(this,"Some Error Occurred. Please Try Again",Toast.LENGTH_LONG).show()
+            Log.d("TAG EXCEPTION", e.message.toString())
         }
     }
 
