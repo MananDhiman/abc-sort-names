@@ -8,7 +8,7 @@ plugins {
 
 android {
     namespace = "com.manandhiman.abc"
-    compileSdk = 36
+    compileSdk = 37
 
     defaultConfig {
         applicationId = "com.manandhiman.abc"
@@ -72,4 +72,6 @@ dependencies {
     kapt("androidx.room:room-compiler:$roomVersion")
 
     implementation("androidx.lifecycle:lifecycle-viewmodel-compose:2.8.5")
+
+    implementation("androidx.navigation:navigation-compose:2.7.6")
 }

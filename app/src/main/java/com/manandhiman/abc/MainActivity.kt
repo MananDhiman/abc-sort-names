@@ -20,12 +20,17 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material3.Button
+import androidx.compose.material3.Card
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.HorizontalDivider
@@ -35,6 +40,7 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -46,8 +52,19 @@ import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.window.Dialog
 import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.navigation.NavHostController
+import androidx.navigation.compose.NavHost
+import androidx.navigation.compose.composable
+import androidx.navigation.compose.rememberNavController
 import com.manandhiman.abc.ui.theme.ABCSortNamesTheme
+
+// todo lazy row lists (all, x1, x2, x3..., manage lists)
+// todo manage lists opens new screen with list of lists
+// todo create new list
+// todo delete list
+// todo rename list
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -57,7 +74,13 @@ class MainActivity : ComponentActivity() {
             ABCSortNamesTheme {
                 Scaffold(modifier = Modifier.fillMaxSize()) { innerPadding ->
                     Box(Modifier.padding(innerPadding)) {
-                        UI(viewModel{ MViewModel(application) })
+                        val viewModel = viewModel{ MViewModel(application) }
+                        val navController = rememberNavController()
+                        NavHost(navController, startDestination = "main") {
+                            composable(route = "main") { UI(viewModel, navController) }
+                            composable(route = "manageLists") { ListsScreen() }
+                        }
+
                     }
                 }
             }
@@ -65,7 +88,7 @@ class MainActivity : ComponentActivity() {
     }
 
     @Composable
-    fun UI(viewModel: MViewModel) {
+    fun UI(viewModel: MViewModel, navController: NavHostController) {
 
         var inputName by rememberSaveable { mutableStateOf("") }
         val currentFilter = remember { mutableStateOf(Filter.DEFAULT) }
@@ -81,7 +104,7 @@ class MainActivity : ComponentActivity() {
                 horizontalArrangement = Arrangement.SpaceAround,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Button(onClick = { shareList(viewModel.students) }) {
+                Button(onClick = { shareList(viewModel.students) }, enabled = viewModel.students.isNotEmpty()) {
                     Text(text = "Share List")
                 }
 
@@ -110,16 +133,39 @@ class MainActivity : ComponentActivity() {
                             text = { Text("By Name Length") },
                             onClick = { currentFilter.value = Filter.NAME_LENGTH }
                         )
-//
-//                        HorizontalDivider()
-//
-//                        DropdownMenuItem(
-//                            text = { Text("Send Feedback") },
-//                            onClick = { /* Handle send feedback! */ }
-//                        )
+                    }
+                }
+
+
+            }
+
+            Spacer(modifier = Modifier.height(8.dp))
+
+            LazyRow(
+                Modifier
+                    .fillMaxWidth()
+                    .padding(4.dp) ) {
+                // todo update colour set selected or disabled later
+                item {
+                    Button(onClick = {  }) {
+                        Text(text = "All")
+                    }
+                    Spacer(modifier = Modifier.width(4.dp))
+                }
+
+                items(5) {
+                    Button(onClick = {  }) {
+                        Text(text = "List $it")
+                    }
+                    Spacer(modifier = Modifier.width(4.dp))
+                }
+                item {
+                    Button(onClick = { navController.navigate("manageLists" )}) {
+                        Text(text = "Manage Lists")
                     }
                 }
             }
+
 
             Spacer(modifier = Modifier.height(8.dp))
 
@@ -140,7 +186,6 @@ class MainActivity : ComponentActivity() {
                             viewModel.addStudent(inputName)
                             inputName = ""
                         } }
-//            onNext = { focusRequester.requestFocus() }
                     )
                 )
 
@@ -150,16 +195,13 @@ class MainActivity : ComponentActivity() {
                         inputName = ""
                     }
                 }
-                ) {
-                    Text(text = "Add")
-                }
+                ) { Text(text = "Add") }
 
             }
 
             Spacer(modifier = Modifier.height(8.dp))
 
-            var students: List<Student> = listOf()
-            students = when (currentFilter.value) {
+            val students: List<Student> = when (currentFilter.value) {
                 Filter.DEFAULT -> viewModel.students
                 Filter.REVERSE -> viewModel.studentsReversed
                 Filter.NAME_LENGTH -> viewModel.studentsNameLength
@@ -197,6 +239,92 @@ class MainActivity : ComponentActivity() {
         }
 
 
+    }
+
+    @Composable
+    fun ListsScreen() {
+        Column(
+            Modifier
+                .fillMaxSize()
+                .padding(16.dp)
+        ) {
+            val openDialog = remember { mutableStateOf(false) }
+            val listName = remember { mutableStateOf("") }
+
+            if (openDialog.value) {
+                ManageListDialog(openDialog, listName)
+            }
+
+            Text("Manage Lists", fontSize = 24.sp)
+
+            Spacer(Modifier.height(24.dp))
+
+            Button(onClick = {
+                openDialog.value = true
+            }) { // todo
+                Text(text = "Create new List")
+            }
+
+            Spacer(Modifier.height(16.dp))
+
+            LazyColumn {
+                items(count = 5) {
+                    Column {
+                        Row(modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(4.dp), horizontalArrangement = Arrangement.SpaceBetween) {
+                            Column { Text("List $it") }
+
+                            Row(Modifier.padding(2.dp)) {
+                                Icon(
+                                    imageVector = Icons.Default.Edit,
+                                    contentDescription = "Edit List Name",
+                                    modifier = Modifier.clickable {
+                                        openDialog.value = true
+                                    } // todo logic
+                                )
+                                Spacer(Modifier.width(16.dp))
+                                Icon(
+                                    imageVector = Icons.Default.Delete,
+                                    contentDescription = "Delete List",
+                                    modifier = Modifier.clickable {  } // todo logic
+                                )
+                            }
+
+                        }
+                        HorizontalDivider(thickness = 2.dp)
+                    }
+
+
+                }
+            }
+
+        }
+
+
+    }
+
+    @Composable
+    fun ManageListDialog(openDialog: MutableState<Boolean>, listName: MutableState<String>) {
+        Dialog(onDismissRequest = { openDialog.value = false }) {
+            Card(modifier = Modifier
+                    .fillMaxWidth()
+                    .height(200.dp)
+                    .padding(8.dp),
+                shape = RoundedCornerShape(16.dp)) {
+
+                Column(Modifier.fillMaxSize().padding(16.dp), verticalArrangement = Arrangement.SpaceBetween) {
+                    OutlinedTextField(value = listName.value, onValueChange = { listName.value = it }, label = { Text("List Name") })
+
+                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                        Button(onClick = { openDialog.value = false }) { Text("Cancel") }
+                        Button(onClick = { }) { Text("Save") }
+                    }
+
+                }
+
+            }
+        }
     }
 
     private fun shareList(students: List<Student>) {
@@ -245,7 +373,7 @@ class MainActivity : ComponentActivity() {
     @Composable
     fun GreetingPreview() {
         ABCSortNamesTheme {
-            UI(viewModel{ MViewModel(application) })
+            UI(viewModel{ MViewModel(application) }, NavHostController(this))
         }
     }
 }
