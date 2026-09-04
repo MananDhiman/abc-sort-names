@@ -74,11 +74,14 @@ class MainActivity : ComponentActivity() {
             ABCSortNamesTheme {
                 Scaffold(modifier = Modifier.fillMaxSize()) { innerPadding ->
                     Box(Modifier.padding(innerPadding)) {
-                        val viewModel = viewModel{ MViewModel(application) }
+
+                        val db = DatabaseHandler(applicationContext)
+                        val viewModel = viewModel{ MViewModel(db) }
                         val navController = rememberNavController()
+
                         NavHost(navController, startDestination = "main") {
                             composable(route = "main") { UI(viewModel, navController) }
-                            composable(route = "manageLists") { ListsScreen() }
+                            composable(route = "manageLists") { ListsScreen(viewModel) }
                         }
 
                     }
@@ -148,14 +151,14 @@ class MainActivity : ComponentActivity() {
                 // todo update colour set selected or disabled later
                 item {
                     Button(onClick = {  }) {
-                        Text(text = "All")
+                        Text(text = "All Lists")
                     }
                     Spacer(modifier = Modifier.width(4.dp))
                 }
 
-                items(5) {
+                items(viewModel.abcLists.size) {
                     Button(onClick = {  }) {
-                        Text(text = "List $it")
+                        Text(text = viewModel.abcLists[it].name)
                     }
                     Spacer(modifier = Modifier.width(4.dp))
                 }
@@ -229,7 +232,7 @@ class MainActivity : ComponentActivity() {
                         Icon(
                             imageVector = Icons.Default.Delete,
                             contentDescription = "Delete Item",
-                            modifier = Modifier.clickable { viewModel.deleteFromDB(students[it]) }
+                            modifier = Modifier.clickable { viewModel.deleteStudentFromDB(students[it]) }
                         )
                     }
                     HorizontalDivider()
@@ -242,17 +245,19 @@ class MainActivity : ComponentActivity() {
     }
 
     @Composable
-    fun ListsScreen() {
+    fun ListsScreen(viewModel: MViewModel) {
         Column(
             Modifier
                 .fillMaxSize()
                 .padding(16.dp)
         ) {
             val openDialog = remember { mutableStateOf(false) }
-            val listName = remember { mutableStateOf("") }
+            val listName = remember { mutableStateOf("Default List") }
+
+            val activeListId = remember { mutableStateOf(0) }
 
             if (openDialog.value) {
-                ManageListDialog(openDialog, listName)
+                ManageListDialog(openDialog, listName, activeListId, viewModel::addOrUpdateList)
             }
 
             Text("Manage Lists", fontSize = 24.sp)
@@ -261,6 +266,7 @@ class MainActivity : ComponentActivity() {
 
             Button(onClick = {
                 openDialog.value = true
+                activeListId.value = 0
             }) { // todo
                 Text(text = "Create new List")
             }
@@ -268,30 +274,21 @@ class MainActivity : ComponentActivity() {
             Spacer(Modifier.height(16.dp))
 
             LazyColumn {
-                items(count = 5) {
+                items(viewModel.abcLists.size) {
                     Column {
                         Row(modifier = Modifier
                             .fillMaxWidth()
                             .padding(4.dp), horizontalArrangement = Arrangement.SpaceBetween) {
-                            Column { Text("List $it") }
 
-                            Row(Modifier.padding(2.dp)) {
-                                Icon(
-                                    imageVector = Icons.Default.Edit,
-                                    contentDescription = "Edit List Name",
-                                    modifier = Modifier.clickable {
-                                        openDialog.value = true
-                                    } // todo logic
-                                )
-                                Spacer(Modifier.width(16.dp))
+                                Text(viewModel.abcLists[it].name)
+
                                 Icon(
                                     imageVector = Icons.Default.Delete,
                                     contentDescription = "Delete List",
-                                    modifier = Modifier.clickable {  } // todo logic
+                                    modifier = Modifier.clickable { viewModel.deleteList(viewModel.abcLists[it].id) }
                                 )
-                            }
 
-                        }
+                            }
                         HorizontalDivider(thickness = 2.dp)
                     }
 
@@ -305,7 +302,12 @@ class MainActivity : ComponentActivity() {
     }
 
     @Composable
-    fun ManageListDialog(openDialog: MutableState<Boolean>, listName: MutableState<String>) {
+    fun ManageListDialog(
+        openDialog: MutableState<Boolean>,
+        listName: MutableState<String>,
+        activeListId: MutableState<Int>,
+        addOrUpdateList: (id: Int, listName: String) -> Unit,
+        ) {
         Dialog(onDismissRequest = { openDialog.value = false }) {
             Card(modifier = Modifier
                     .fillMaxWidth()
@@ -318,7 +320,12 @@ class MainActivity : ComponentActivity() {
 
                     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
                         Button(onClick = { openDialog.value = false }) { Text("Cancel") }
-                        Button(onClick = { }) { Text("Save") }
+                        Button(onClick = {
+                            addOrUpdateList(activeListId.value, listName.value)
+                            openDialog.value = false
+                            activeListId.value = 0
+                            listName.value = "Default List"
+                        }) { Text("Save") }
                     }
 
                 }
@@ -373,7 +380,7 @@ class MainActivity : ComponentActivity() {
     @Composable
     fun GreetingPreview() {
         ABCSortNamesTheme {
-            UI(viewModel{ MViewModel(application) }, NavHostController(this))
+            UI(viewModel{ MViewModel(DatabaseHandler(this@MainActivity)) }, NavHostController(this))
         }
     }
 }

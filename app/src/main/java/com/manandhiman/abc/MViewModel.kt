@@ -1,38 +1,68 @@
 package com.manandhiman.abc
 
-import android.app.Application
 import androidx.compose.runtime.mutableStateOf
-import androidx.lifecycle.AndroidViewModel
-import androidx.room.Room
+import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewModelScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 
-class MViewModel(application: Application): AndroidViewModel(application) {
-    private val db: AppDatabase = Room.databaseBuilder(
-        getApplication(),
-        AppDatabase::class.java, "database-name",)
-        .allowMainThreadQueries().build()
+class MViewModel(private val databaseHandler: DatabaseHandler) : ViewModel() {
 
-    private val dao = db.dao()
-
-
-    private val _students = mutableStateOf(dao.getStudents())
+    private val _students = mutableStateOf(databaseHandler.getStudents())
     val students get() = _students.value.sortedBy { it.name }
     val studentsReversed get() = _students.value.sortedByDescending { it.name }
     val studentsNameLength get() = _students.value.sortedBy { it.name.length }
+
+    private val _abcLists = mutableStateOf(databaseHandler.getLists())
+    val abcLists get() = _abcLists.value
 
     fun addStudent(inputName: String) {
         val formattedName = inputName.trim().split(" ").joinToString(separator = " ") { it.capitalize() }
 
         try {
-            dao.addStudent(Student(name = formattedName))
-            _students.value = dao.getStudents()
+            viewModelScope.launch(Dispatchers.IO) {
+                databaseHandler.addNewStudent(formattedName)
+            }
+
+        refreshLists()
         } catch (_: Exception) {
 
         }
 
+        refreshLists()
+
     }
 
-    fun deleteFromDB(student: Student) {
-        dao.delete(student)
-        _students.value = dao.getStudents()
+    fun addOrUpdateList(id: Int, listName: String = "Default Name") {
+        if (id == 0) {
+            viewModelScope.launch(Dispatchers.IO) {
+                databaseHandler.addNewList(listName)
+            }
+        }
+
+        refreshLists()
+    }
+
+    private fun refreshLists() {
+        viewModelScope.launch(Dispatchers.IO) {
+            _students.value = databaseHandler.getStudents()
+            _abcLists.value = databaseHandler.getLists()
+        }
+    }
+
+    fun deleteStudentFromDB(student: Student) {
+        viewModelScope.launch(Dispatchers.IO) {
+            databaseHandler.deleteStudent(student.name)
+        }
+
+        refreshLists()
+    }
+
+    fun deleteList(listId: Int) {
+        viewModelScope.launch(Dispatchers.IO) {
+            databaseHandler.deleteList(listId)
+        }
+
+        refreshLists()
     }
 }
