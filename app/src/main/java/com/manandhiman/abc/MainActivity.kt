@@ -4,12 +4,14 @@ package com.manandhiman.abc
 import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Intent
+import android.graphics.Color
 import android.os.Bundle
 import android.util.Log
 import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -28,7 +30,6 @@ import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Delete
-import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.DropdownMenu
@@ -60,12 +61,6 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import com.manandhiman.abc.ui.theme.ABCSortNamesTheme
 
-// todo lazy row lists (all, x1, x2, x3..., manage lists)
-// todo manage lists opens new screen with list of lists
-// todo create new list
-// todo delete list
-// todo rename list
-
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -96,11 +91,7 @@ class MainActivity : ComponentActivity() {
         var inputName by rememberSaveable { mutableStateOf("") }
         val currentFilter = remember { mutableStateOf(Filter.DEFAULT) }
 
-        Column(
-            Modifier
-                .fillMaxSize()
-                .padding(16.dp)
-        ) {
+        Column( Modifier.fillMaxSize() .padding(16.dp) ) {
 
             Row(
                 modifier = Modifier.fillMaxWidth(),
@@ -113,9 +104,8 @@ class MainActivity : ComponentActivity() {
 
                 val dropDownExpanded = remember { mutableStateOf(false) }
 
-                Column ( Modifier.clickable { dropDownExpanded.value = !dropDownExpanded.value }) {
-                    OutlinedButton(onClick = {dropDownExpanded.value = !dropDownExpanded.value}) {
-                        Text("Options") }
+                Column ( Modifier.clickable { dropDownExpanded.value = !dropDownExpanded.value } ) {
+                    OutlinedButton(onClick = {dropDownExpanded.value = !dropDownExpanded.value}) { Text("Options") }
 
                     DropdownMenu(
                         expanded = dropDownExpanded.value,
@@ -139,7 +129,6 @@ class MainActivity : ComponentActivity() {
                     }
                 }
 
-
             }
 
             Spacer(modifier = Modifier.height(8.dp))
@@ -147,17 +136,22 @@ class MainActivity : ComponentActivity() {
             LazyRow(
                 Modifier
                     .fillMaxWidth()
-                    .padding(4.dp) ) {
+                    .border(width = 3.dp, shape = RoundedCornerShape(20.dp), color = androidx.compose.ui.graphics.Color(Color.GRAY))
+                    .padding(12.dp)) {
                 // todo update colour set selected or disabled later
                 item {
-                    Button(onClick = {  }) {
-                        Text(text = "All Lists")
+                    Button(onClick = {
+                        viewModel.activeList = 0
+                    }) {
+                        Text(text = "All Entries")
                     }
                     Spacer(modifier = Modifier.width(4.dp))
                 }
 
                 items(viewModel.abcLists.size) {
-                    Button(onClick = {  }) {
+                    Button(onClick = {
+                        viewModel.activeList = viewModel.abcLists[it].id
+                    }) {
                         Text(text = viewModel.abcLists[it].name)
                     }
                     Spacer(modifier = Modifier.width(4.dp))
@@ -273,27 +267,34 @@ class MainActivity : ComponentActivity() {
 
             Spacer(Modifier.height(16.dp))
 
-            LazyColumn {
+            LazyColumn(
+                Modifier
+                    .fillMaxSize()
+                    .padding(8.dp)) {
                 items(viewModel.abcLists.size) {
-                    Column {
-                        Row(modifier = Modifier
+
+                    val number = it + 1
+                    val name = viewModel.abcLists[it].name
+
+                    Row(
+                        Modifier
                             .fillMaxWidth()
-                            .padding(4.dp), horizontalArrangement = Arrangement.SpaceBetween) {
+                            .padding(8.dp),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
 
-                                Text(viewModel.abcLists[it].name)
+                        Text(text = "$number. $name", fontSize = 24.sp, softWrap = true, modifier = Modifier.fillMaxWidth(0.75f))
 
-                                Icon(
-                                    imageVector = Icons.Default.Delete,
-                                    contentDescription = "Delete List",
-                                    modifier = Modifier.clickable { viewModel.deleteList(viewModel.abcLists[it].id) }
-                                )
-
-                            }
-                        HorizontalDivider(thickness = 2.dp)
+                        Icon(
+                            imageVector = Icons.Default.Delete,
+                            contentDescription = "Delete List",
+                            modifier = Modifier.clickable { viewModel.deleteList(viewModel.abcLists[it].id) }
+                        )
                     }
-
-
+                    HorizontalDivider()
                 }
+
             }
 
         }

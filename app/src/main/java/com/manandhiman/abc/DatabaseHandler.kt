@@ -24,11 +24,17 @@ class DatabaseHandler(context: Context): SQLiteOpenHelper(context, DB_NAME, null
         db?.execSQL("UPDATE ${Students.TABLE_NAME} SET ${Students.COLUMN_LIST_ID}=0")
     }
 
-    fun getStudents(): List<Student> {
+    fun getStudents(listId: Int): List<Student> {
         val db = this.readableDatabase
 
         val list = mutableListOf<Student>()
-        val query = "SELECT * FROM ${Students.TABLE_NAME} ORDER BY ${Students.COLUMN_NAME}"
+
+        var whereCondition = ""
+        if (listId != 0) {
+            whereCondition = "WHERE ${Students.COLUMN_LIST_ID} = $listId"
+        }
+
+        val query = "SELECT * FROM ${Students.TABLE_NAME} $whereCondition  ORDER BY ${Students.COLUMN_NAME}"
 
         val result = db.rawQuery(query, null)
         if(result.moveToFirst()) {
@@ -64,7 +70,7 @@ class DatabaseHandler(context: Context): SQLiteOpenHelper(context, DB_NAME, null
         return list
     }
 
-    fun addNewStudent(formattedName: String, listId: Int = 0): Long {
+    fun addNewStudent(formattedName: String, listId: Int): Long {
         val db = this.writableDatabase
 
         val values = ContentValues().apply {

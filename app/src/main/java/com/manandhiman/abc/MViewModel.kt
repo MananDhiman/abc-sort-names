@@ -1,5 +1,6 @@
 package com.manandhiman.abc
 
+import android.util.Log
 import androidx.compose.runtime.mutableStateOf
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -8,7 +9,13 @@ import kotlinx.coroutines.launch
 
 class MViewModel(private val databaseHandler: DatabaseHandler) : ViewModel() {
 
-    private val _students = mutableStateOf(databaseHandler.getStudents())
+    var activeList = 0
+        set(newValue) {
+            field = newValue
+            refreshLists(activeList)
+        }
+
+    private val _students = mutableStateOf(databaseHandler.getStudents(activeList))
     val students get() = _students.value.sortedBy { it.name }
     val studentsReversed get() = _students.value.sortedByDescending { it.name }
     val studentsNameLength get() = _students.value.sortedBy { it.name.length }
@@ -16,20 +23,20 @@ class MViewModel(private val databaseHandler: DatabaseHandler) : ViewModel() {
     private val _abcLists = mutableStateOf(databaseHandler.getLists())
     val abcLists get() = _abcLists.value
 
+
     fun addStudent(inputName: String) {
         val formattedName = inputName.trim().split(" ").joinToString(separator = " ") { it.capitalize() }
 
         try {
             viewModelScope.launch(Dispatchers.IO) {
-                databaseHandler.addNewStudent(formattedName)
+                databaseHandler.addNewStudent(formattedName, activeList)
             }
-
-        refreshLists()
+            refreshLists(activeList)
         } catch (_: Exception) {
 
         }
 
-        refreshLists()
+        refreshLists(activeList)
 
     }
 
@@ -40,12 +47,13 @@ class MViewModel(private val databaseHandler: DatabaseHandler) : ViewModel() {
             }
         }
 
-        refreshLists()
+        refreshLists(activeList)
     }
 
-    private fun refreshLists() {
+    fun refreshLists(activeList: Int = this.activeList) {
+        Log.d("tag db", "refresh called with $activeList")
         viewModelScope.launch(Dispatchers.IO) {
-            _students.value = databaseHandler.getStudents()
+            _students.value = databaseHandler.getStudents(activeList)
             _abcLists.value = databaseHandler.getLists()
         }
     }
@@ -55,7 +63,7 @@ class MViewModel(private val databaseHandler: DatabaseHandler) : ViewModel() {
             databaseHandler.deleteStudent(student.name)
         }
 
-        refreshLists()
+        refreshLists(activeList)
     }
 
     fun deleteList(listId: Int) {
@@ -63,6 +71,6 @@ class MViewModel(private val databaseHandler: DatabaseHandler) : ViewModel() {
             databaseHandler.deleteList(listId)
         }
 
-        refreshLists()
+        refreshLists(activeList)
     }
 }
