@@ -11,6 +11,7 @@ import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.compose.animation.animateColorAsState
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -31,11 +32,13 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
@@ -93,6 +96,8 @@ class MainActivity : ComponentActivity() {
 
         Column( Modifier.fillMaxSize() .padding(16.dp) ) {
 
+
+
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceAround,
@@ -126,6 +131,15 @@ class MainActivity : ComponentActivity() {
                             text = { Text("By Name Length") },
                             onClick = { currentFilter.value = Filter.NAME_LENGTH }
                         )
+                        DropdownMenuItem(
+                            text = { Text(text = "Manage Lists") },
+                            onClick = { navController.navigate("manageLists" ) }
+                        )
+                        HorizontalDivider()
+                        DropdownMenuItem(
+                            text = { Text(text = "Tutorial") },
+                            onClick = { navController.navigate("manageLists" ) }
+                        )
                     }
                 }
 
@@ -139,27 +153,33 @@ class MainActivity : ComponentActivity() {
                     .border(width = 3.dp, shape = RoundedCornerShape(20.dp), color = androidx.compose.ui.graphics.Color(Color.GRAY))
                     .padding(12.dp)) {
                 // todo update colour set selected or disabled later
+
+                fun isSelected(itemIndex: Int): Boolean = viewModel.activeList.intValue == itemIndex
+
                 item {
-                    Button(onClick = {
-                        viewModel.activeList = 0
-                    }) {
+                    Button(
+                        onClick = { viewModel.setActiveList(0) },
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = if (isSelected(0)) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceVariant,
+                            contentColor = if (isSelected(0)) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant
+                        ),
+                        ) {
                         Text(text = "All Entries")
                     }
                     Spacer(modifier = Modifier.width(4.dp))
                 }
 
                 items(viewModel.abcLists.size) {
-                    Button(onClick = {
-                        viewModel.activeList = viewModel.abcLists[it].id
-                    }) {
+                    Button(
+                        onClick = { viewModel.setActiveList(viewModel.abcLists[it].id) },
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = if (isSelected(viewModel.abcLists[it].id)) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceVariant,
+                            contentColor = if (isSelected(viewModel.abcLists[it].id)) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant
+                        ),
+                    ) {
                         Text(text = viewModel.abcLists[it].name)
                     }
                     Spacer(modifier = Modifier.width(4.dp))
-                }
-                item {
-                    Button(onClick = { navController.navigate("manageLists" )}) {
-                        Text(text = "Manage Lists")
-                    }
                 }
             }
 
