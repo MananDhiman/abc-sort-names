@@ -11,7 +11,6 @@ import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
-import androidx.compose.animation.animateColorAsState
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -23,7 +22,9 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.wrapContentHeight
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -77,6 +78,8 @@ class MainActivity : ComponentActivity() {
                         val viewModel = viewModel{ MViewModel(db) }
                         val navController = rememberNavController()
 
+                        SharedPreferencesManager.init(this@MainActivity)
+
                         NavHost(navController, startDestination = "main") {
                             composable(route = "main") { UI(viewModel, navController) }
                             composable(route = "manageLists") { ListsScreen(viewModel) }
@@ -95,8 +98,11 @@ class MainActivity : ComponentActivity() {
         val currentFilter = remember { mutableStateOf(Filter.DEFAULT) }
 
         Column( Modifier.fillMaxSize() .padding(16.dp) ) {
+            val firstTime = SharedPreferencesManager.getString("showTutorial","true") == "true"
+            val showTutorial = remember { mutableStateOf(firstTime) }
 
-
+            if (showTutorial.value)
+                TutorialDialog(showTutorial)
 
             Row(
                 modifier = Modifier.fillMaxWidth(),
@@ -138,7 +144,7 @@ class MainActivity : ComponentActivity() {
                         HorizontalDivider()
                         DropdownMenuItem(
                             text = { Text(text = "Tutorial") },
-                            onClick = { navController.navigate("manageLists" ) }
+                            onClick = { showTutorial.value = true }
                         )
                     }
                 }
@@ -355,6 +361,40 @@ class MainActivity : ComponentActivity() {
         }
     }
 
+    @Composable
+    fun TutorialDialog(
+        openDialog: MutableState<Boolean>,
+    ) {
+        Dialog(onDismissRequest = { openDialog.value = false }) {
+            Card(modifier = Modifier
+                .fillMaxWidth().wrapContentHeight()
+                .padding(8.dp),
+                shape = RoundedCornerShape(16.dp)) {
+
+                Column(Modifier.padding(16.dp)) {
+                    Text(text = "Tutorial", fontSize = 24.sp)
+                    Spacer(Modifier.size(16.dp))
+                    Text("Application allows you to add items into separate lists\n\n" +
+                            "To add an item to a separate list, First click on 'Options' button\n\n" +
+                            "Add a new List, then return to home screen, click on the newly created list in the horizontally scrollable list\n\n" +
+                            "Then add your item\n\n" +
+                            "To view this info again:\n Options -> Tutorial")
+
+
+                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                        Button(onClick = { openDialog.value = false } ) { Text("Ok") }
+                        Button(onClick = {
+                            SharedPreferencesManager.saveString("showTutorial", "false")
+                            openDialog.value = false
+                        } ) { Text("Don't show again") }
+                    }
+
+                }
+
+            }
+        }
+    }
+
     private fun shareList(students: List<Student>) {
         val listAsText = generateString(students)
 
@@ -401,7 +441,8 @@ class MainActivity : ComponentActivity() {
     @Composable
     fun GreetingPreview() {
         ABCSortNamesTheme {
-            UI(viewModel{ MViewModel(DatabaseHandler(this@MainActivity)) }, NavHostController(this))
+//            UI(viewModel{ MViewModel(DatabaseHandler(this@MainActivity)) }, NavHostController(this))
+            TutorialDialog(remember { mutableStateOf(true) })
         }
     }
 }

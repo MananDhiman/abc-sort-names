@@ -4,14 +4,22 @@ import android.content.ContentValues
 import android.content.Context
 import android.database.sqlite.SQLiteDatabase
 import android.database.sqlite.SQLiteOpenHelper
+import android.util.Log
 
 private const val DB_NAME = "database-name"
 private const val DB_VER = 2
 
 class DatabaseHandler(context: Context): SQLiteOpenHelper(context, DB_NAME, null, DB_VER) {
+
     override fun onCreate(db: SQLiteDatabase?) {
-        db?.execSQL(Students.CREATE_TABLE_QUERY)
-        db?.execSQL(ABCLists.CREATE_TABLE_QUERY)
+        Log.d("tag db",ABCLists.CREATE_TABLE_QUERY)
+        try {
+            db?.execSQL(Students.CREATE_TABLE_QUERY)
+            db?.execSQL(ABCLists.CREATE_TABLE_QUERY)
+        } catch (e: Exception) {
+            Log.d("tag db", e.message.toString())
+        }
+
     }
 
     override fun onUpgrade(
@@ -121,7 +129,7 @@ class DatabaseHandler(context: Context): SQLiteOpenHelper(context, DB_NAME, null
         const val COLUMN_ID = "id"
 
         const val CREATE_TABLE_QUERY = "CREATE TABLE $TABLE_NAME (" +
-                "$COLUMN_ID INTEGER PRIMARY KEY AUTO_INCREMENT, " +
+                "$COLUMN_ID INTEGER PRIMARY KEY, " +
                 "$COLUMN_NAME TEXT);"
     }
 }
